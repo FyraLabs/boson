@@ -4,6 +4,8 @@ Boson is a Steam compatibility tool that allows you to run Electron-based games 
 rather than using the game's bundled Electron version and running it thorugh Proton.
 Think of it like [Boxtron], [Roberta], or [Luxtorpeda], but for Electron games.
 
+Please check [this list](https://steamdb.info/tech/Container/Electron/) to see if you need/want to use Boson for your game.
+
 [Boxtron]: https://github.com/dreamer/boxtron
 [Roberta]: https://github.com/dreamer/roberta
 [Luxtorpeda]: https://github.com/dreamer/luxtorpeda
