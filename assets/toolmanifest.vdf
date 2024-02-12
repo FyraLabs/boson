@@ -1,0 +1,7 @@
+"manifest"
+{
+  "commandline" "/boson run"
+  "commandline_waitforexitandrun" "/boson run"
+  "commandline_getnativepath" "/boson path"
+  "commandline_getcompatpath" "/boson path"
+}

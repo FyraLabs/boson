@@ -1,0 +1,13 @@
+"compatibilitytools"
+{
+  "compat_tools"
+  {
+    "boson" // Internal name of this tool
+    {
+      "install_path" "."
+      "display_name" "Boson"
+      "from_oslist"  "windows"
+      "to_oslist"    "linux"
+    }
+  }
+}
