@@ -66,6 +66,7 @@ Install Rust by using [rustup](https://rustup.rs/), and then run the following c
 
 ```sh
 make
+make install # Installs to ~/.steam/root/compatibilitytools.d/, set DESTDIR to install to a different directory
 ```
 
 The resulting Steam compatibility tool will be outputted to `build/`. You can just copy the resulting files to `~/.steam/root/compatibilitytools.d/` and you're good to go.
