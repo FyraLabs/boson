@@ -62,7 +62,7 @@ The resulting Steam compatibility tool will be outputted to `build/`. You can ju
   ELECTRON_PATH=/path/to/electron %command%
   ```
 - Due to some incompatibility issues with the Steam overlay, it's recommended to disable the Steam overlay for the game you're running with Boson. Boson is currently hardcoded to remove any `LD_PRELOAD` envars on runtime, to prevent the Steam overlay from being loaded.
-- If you're trying to run some other Electron-based game that isn't Cookie Clicker that doesn't have the game path set to `resources/app`, you can set the `BOSON_LOAD_PATH` environment variable in your Steam launch options to point to the game's `resources/app` directory, e.g:
+- If you're trying to run some other Electron-based game that isn't Cookie Clicker that doesn't have the game path set to `resources/app`, you can set the `BOSON_LOAD_PATH` environment variable in your Steam launch options to point to the game's resource path (a plain folder or an `app.asar` file), e.g:
   ```
   BOSON_LOAD_PATH=/path/to/game/resources/app %command%
   ```
