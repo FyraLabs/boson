@@ -30,6 +30,15 @@ fn get_game_path(path: &Path) -> PathBuf {
     }
 }
 
+/// Specify a relative path to the game executable to load the Electron files from
+/// defaults to `resources/app`, as Cookie Clicker puts its files there
+fn app_path() -> String {
+    if let Ok(path) = std::env::var("BOSON_LOAD_PATH") {
+        path
+    } else {
+        APPDIR.to_string()
+    }
+}
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 #[command(propagate_version = true)]
@@ -62,10 +71,14 @@ fn main() -> Result<()> {
         .with_env_filter(DEFAULT_LOG_LEVEL)
         .init();
 
+    let appname = env!("CARGO_PKG_NAME");
+    let appversion = env!("CARGO_PKG_VERSION");
     // print the args
-    println!("args:");
-    println!("{:?}", std::env::args().collect::<Vec<String>>());
-
+    tracing::info!("{appname} {appversion} starting up, logging at {DEFAULT_LOG_LEVEL} level.");
+    tracing::info!(
+        "Launched with args: {:?}",
+        std::env::args().collect::<Vec<String>>()
+    );
     let args = Boson::parse();
 
     match args.cmd {
@@ -75,7 +88,10 @@ fn main() -> Result<()> {
         } => {
             let electron = electron_path();
 
-            let mut args = vec![APPDIR];
+            let mut args = vec![];
+
+            let app_path_str = app_path();
+            args.push(app_path_str.as_str());
 
             let gpath = get_game_path(&game_path);
 
