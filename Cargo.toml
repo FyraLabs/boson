@@ -5,10 +5,19 @@ edition = "2021"
 license = "MIT"
 authors = ["Pornpipat Popum <cappy@fyralabs.com>"]
 description = "Run Electron Steam games natively"
+readme = "README.md"
+repository = "https://github.com/FyraLabs/boson"
+license-file = "LICENSE"
+categories = [
+    "accessibility",
+    "games",
+    "wasm",
+    "web-programming"
+]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-clap = { version = "4.4.18", features = ["derive"] }
-color-eyre = "0.6.2"
-tracing = { version = "0.1.40", features = ["log"] }
-tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+clap = { version = "~4", features = ["derive"] }
+color-eyre = "~0.6"
+tracing = { version = "~0.1", features = ["log"] }
+tracing-subscriber = { version = "~0.3", features = ["env-filter"] }
