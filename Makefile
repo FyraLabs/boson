@@ -15,7 +15,7 @@ build-dev:
 	cargo build
 
 pack-release: prep build
-	cp $(TARGET_DIR)/release/$(CRATE_NAME)
+	cp $(TARGET_DIR)/release/$(CRATE_NAME) $(DESTDIR)/$(CRATE_NAME)
 	@echo "Copying assets"
 	cp -av $(CRATE_DIR)/assets/. $(DESTDIR)
 
