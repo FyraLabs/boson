@@ -30,3 +30,10 @@ prep:
 
 clean:
 	rm -rf $(DESTDIR)
+
+package: pack-release
+	@# copy to tmp
+	mkdir -p /tmp/$(CRATE_NAME)
+	cp -av $(DESTDIR)/. /tmp/$(CRATE_NAME)/$(CRATE_NAME)
+	tar -C /tmp/$(CRATE_NAME) -caf $(CRATE_NAME).tar.zst $(CRATE_NAME)
+	rm -rf /tmp/$(CRATE_NAME)
