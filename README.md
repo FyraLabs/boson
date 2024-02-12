@@ -40,7 +40,7 @@ build rather than running Electron inside Steam Proton.
    └── compatibiltytool.vdf
    ```
 4. Restart or start Steam if you haven't already
-5. Right-click on the game you want to run with Boson, and select Properties > Force the use of a specific Steam Play compatibility tool > Boson
+5. Right-click on the game you want to run with Boson, and select `Properties > Force the use of a specific Steam Play compatibility tool > Boson`
 6. Run the game, And that's it! The game should now be running using the native Electron build.
 
 ## Building
