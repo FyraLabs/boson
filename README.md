@@ -14,6 +14,14 @@ Inspired by [NativeCookie](https://github.com/Kesefon/NativeCookie/).
 
 Currently, only [Cookie Clicker](https://orteil.dashnet.org/cookieclicker/) is supported at the moment.
 
+## Planned features
+
+- [ ] Database of tweaks for each supported game
+  - [ ] Automatically set up Steamworks API for games that use it (see note above)
+- [ ] Download and install Electron builds from the Electron website (currently you need to bring your own Electron binary)
+- [ ] TOML configuration file(s) for custom tweaks
+- [ ] GUI for managing Boson (and displaying error messages)
+
 ## How does it work?
 
 Boson is a Steam Play compatibility tool, intercepting calls to run the game from its own executable, and redirects
@@ -62,7 +70,7 @@ make
 
 The resulting Steam compatibility tool will be outputted to `build/`. You can just copy the resulting files to `~/.steam/root/compatibilitytools.d/` and you're good to go.
 
-### Notes
+## Notes
 
 - If you're using an electron binary that isn't in your $PATH and called `electron`, you can set the `ELECTRON_PATH` environment variable in your Steam launch options to point to the electron binary you want to use, e.g:
   ```
@@ -75,7 +83,7 @@ The resulting Steam compatibility tool will be outputted to `build/`. You can ju
   ```
   Note that paths here are relative to the game's installation directory.
 
-#### Running Cookie Clicker (and other Greenworks games) with Boson
+### Running Cookie Clicker (and other Greenworks games) with Boson
 
 This guide assumes you already bought Cookie Clicker on Steam, and have it installed.
 
