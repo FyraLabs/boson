@@ -23,10 +23,15 @@ opt-level = "z"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+cached-path = { version = "0.6.1", features = ["rustls-tls", "color-eyre"] }
+chrono = { version = "0.4.34", features = ["serde"] }
 clap = { version = "~4", features = ["derive"] }
 color-eyre = "~0.6"
 octocrab = { version = "0.34.1", features = ["rustls"] }
+semver = { version = "1.0.21", features = ["serde"] }
 serde = { version = "1.0.196", features = ["serde_derive"] }
+serde_json = "1.0.113"
 toml = "0.8.10"
 tracing = { version = "~0.1", features = ["log"] }
 tracing-subscriber = { version = "~0.3", features = ["env-filter"] }
+tracing-test = "0.2.4"
