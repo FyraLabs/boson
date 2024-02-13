@@ -30,3 +30,35 @@ pub fn app_path() -> String {
         APPDIR.to_string()
     }
 }
+
+/// Utility struct for handling LD_LIBRARY_PATH
+pub struct LDPath {
+    pub paths: Vec<PathBuf>,
+}
+
+impl LDPath {
+    pub fn new() -> Self {
+        Self { paths: Vec::new() }
+    }
+
+    pub fn add(&mut self, path: PathBuf) {
+        self.paths.push(path);
+    }
+
+    pub fn to_string(&self) -> String {
+        self.paths
+            .iter()
+            .map(|p| p.to_str().unwrap())
+            .collect::<Vec<&str>>()
+            .join(":")
+    }
+
+    pub fn from_env() -> Self {
+        let paths = std::env::var("LD_LIBRARY_PATH").unwrap_or_default();
+        let paths = paths
+            .split(":")
+            .map(|p| PathBuf::from(p))
+            .collect::<Vec<PathBuf>>();
+        Self { paths }
+    }
+}
