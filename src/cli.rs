@@ -25,8 +25,12 @@ impl Boson {
             } => {
                 let electron = util::electron_path();
 
-                let app_path_str = util::app_path();
-                let gamepath = util::get_game_path(&game_path).join(app_path_str);
+                // right now let's do this funny hack, use `config::join_game_path` to get the asar path
+                // should improve ootb compat for most games
+
+                // let app_path_str = util::app_path();
+                // let gamepath = util::get_game_path(&game_path);
+                let gamepath = crate::config::join_game_path(util::get_game_path(&game_path), None);
 
                 tracing::info!(?gamepath);
                 tracing::debug!(?additional_args);

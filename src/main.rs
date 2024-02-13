@@ -4,6 +4,7 @@ use crate::cli::Boson;
 mod cli;
 mod util;
 mod runtime;
+mod config;
 // use tracing_subscriber::;
 #[cfg(not(debug_assertions))]
 const DEFAULT_LOG_LEVEL: &str = "info";
