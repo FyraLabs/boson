@@ -109,9 +109,10 @@ fn main() -> Result<()> {
 
             let c = cmd.spawn()?.wait();
 
-            Ok(if let Err(e) = c {
+            if let Err(e) = c {
                 return Err(color_eyre::eyre::eyre!(e));
-            })
+            };
+            Ok(())
         }
         Commands::Path { path } => {
             println!("{}", get_game_path(&path).display());
