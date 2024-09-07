@@ -1,8 +1,9 @@
-name: Build binaries
+name: Build binaries (Release)
 on:
-    push:
-        branches:
-            - main
+  push:
+    tags:
+      - "v*.*.*"
+
 jobs:
     build:
         container:
@@ -27,3 +28,9 @@ jobs:
               with:
                 name: boson-x86_64-unknown-linux-musl
                 path: boson.tar.zst
+
+            - name: Release
+              uses: softprops/action-gh-release@v2
+              with:
+                files: boson.tar.zst
+              
