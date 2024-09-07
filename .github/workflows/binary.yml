@@ -3,8 +3,6 @@ on:
     release:
         types:
             - created
-            - published
-            - edited
 
     push:
         branches:
@@ -24,6 +22,11 @@ jobs:
                 target: x86_64-unknown-linux-musl
             
             - name: Build release binaries
-              run: make package
+              run: make package CARGO_ARGS="--target=x86_64-unknown-linux-musl" CARGO_TARGET="x86_64-unknown-linux-musl/release"
             
+            - name: Upload artifact
+              uses: actions/upload-artifact@v4
+              with:
+                name: boson-x86_64-unknown-linux-musl
+                path: boson.tar.zst
             
