@@ -1,0 +1,29 @@
+name: Build binaries
+on:
+    release:
+        types:
+            - created
+            - published
+            - edited
+
+    push:
+        branches:
+            - main
+jobs:
+    build:
+        container:
+            image: fedora:latest
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+            - name: Install dependencies
+              run: dnf install -y gcc gcc-c++ make pkg-config mulsl-devel musl-libc-static musl-clang
+            - uses: actions-rs/toolchain@v1
+              with:
+                toolchain: stable
+                target: x86_64-unknown-linux-musl
+            
+            - name: Build release binaries
+              run: make package
+            
+            
