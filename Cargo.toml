@@ -7,7 +7,6 @@ authors = ["Pornpipat Popum <cappy@fyralabs.com>"]
 description = "Run Electron Steam games natively"
 readme = "README.md"
 repository = "https://github.com/FyraLabs/boson"
-license-file = "LICENSE"
 categories = [
     "accessibility",
     "games",
