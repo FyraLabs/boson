@@ -1,10 +1,7 @@
 use clap::{Parser, Subcommand};
 use color_eyre::{eyre::OptionExt, Result};
 use path_search::get_asar_path;
-use std::{
-    path::PathBuf,
-    process::Command,
-};
+use std::{path::PathBuf, process::Command};
 mod path_search;
 // use tracing_subscriber::;
 #[cfg(not(debug_assertions))]
@@ -63,7 +60,6 @@ fn main() -> Result<()> {
 
             let mut args = vec![];
 
-
             let gpath = path_search::get_game_path(&game_path);
             let app_path_str = get_asar_path(&gpath).ok_or_eyre(
                 "Could not find ASAR file in game directory. Make sure you're running this from the game directory.",
@@ -94,5 +90,4 @@ fn main() -> Result<()> {
             Ok(())
         }
     }
-
 }

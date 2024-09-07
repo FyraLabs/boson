@@ -1,7 +1,7 @@
 //! Path Searching module
-//! 
+//!
 //! This module is a helper to quickly find the path to the Electron app's ASAR file by looking for them in common locations.
-//! 
+//!
 //! It also supports checking the environment variable `BOSON_LOAD_PATH` for a custom path.
 use std::path::{Path, PathBuf};
 
@@ -23,7 +23,7 @@ pub fn env_electron_path() -> String {
 }
 
 /// Get ASAR path
-/// 
+///
 /// Accepts a game root directory, usually from `get_game_path()`
 pub fn get_asar_path(game_root: &Path) -> Option<PathBuf> {
     // First check if there's an override in the environment
@@ -32,10 +32,10 @@ pub fn get_asar_path(game_root: &Path) -> Option<PathBuf> {
     }
 
     // ASAR paths priority
-    // 
+    //
     // Unpacked folders are prioritized over ASAR files
     // as games may be unpacked for development or modding.
-    
+
     const ASAR_PATHS: [&str; 5] = [
         "app.asar/",
         "app.asar",
@@ -43,7 +43,7 @@ pub fn get_asar_path(game_root: &Path) -> Option<PathBuf> {
         "resources/app.asar",
         "resources/app/",
     ];
-    
+
     for path in ASAR_PATHS.iter() {
         let asar_path = game_root.join(path);
         tracing::trace!("Checking path: {:?}", asar_path);
@@ -56,11 +56,6 @@ pub fn get_asar_path(game_root: &Path) -> Option<PathBuf> {
             return Some(asar_path);
         }
     }
-    
+
     None
-    
-    
-    
-    
-    
 }
