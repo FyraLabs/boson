@@ -1,44 +1,17 @@
 use clap::{Parser, Subcommand};
-use color_eyre::Result;
+use color_eyre::{eyre::OptionExt, Result};
+use path_search::get_asar_path;
 use std::{
-    path::{Path, PathBuf},
+    path::PathBuf,
     process::Command,
 };
+mod path_search;
 // use tracing_subscriber::;
 #[cfg(not(debug_assertions))]
 const DEFAULT_LOG_LEVEL: &str = "info";
 #[cfg(debug_assertions)]
-const DEFAULT_LOG_LEVEL: &str = "debug";
-const APPDIR: &str = "resources/app";
+const DEFAULT_LOG_LEVEL: &str = "trace";
 
-fn electron_path() -> String {
-    // get envar
-
-    if let Ok(cmd) = std::env::var("ELECTRON_PATH") {
-        cmd
-    } else {
-        "electron".to_string()
-    }
-}
-
-fn get_game_path(path: &Path) -> PathBuf {
-    // remove file name from path
-    if path.is_file() {
-        path.parent().unwrap().canonicalize().unwrap().to_path_buf()
-    } else {
-        path.canonicalize().unwrap().to_path_buf()
-    }
-}
-
-/// Specify a relative path to the game executable to load the Electron files from
-/// defaults to `resources/app`, as Cookie Clicker puts its files there
-fn app_path() -> String {
-    if let Ok(path) = std::env::var("BOSON_LOAD_PATH") {
-        path
-    } else {
-        APPDIR.to_string()
-    }
-}
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 #[command(propagate_version = true)]
@@ -86,14 +59,16 @@ fn main() -> Result<()> {
             game_path,
             additional_args,
         } => {
-            let electron = electron_path();
+            let electron = path_search::env_electron_path();
 
             let mut args = vec![];
 
-            let app_path_str = app_path();
-            args.push(app_path_str.as_str());
 
-            let gpath = get_game_path(&game_path);
+            let gpath = path_search::get_game_path(&game_path);
+            let app_path_str = get_asar_path(&gpath).ok_or_eyre(
+                "Could not find ASAR file in game directory. Make sure you're running this from the game directory.",
+            )?;
+            args.push(app_path_str.to_str().unwrap());
 
             tracing::info!(?gpath);
 
@@ -115,19 +90,9 @@ fn main() -> Result<()> {
             Ok(())
         }
         Commands::Path { path } => {
-            println!("{}", get_game_path(&path).display());
+            println!("{}", path_search::get_game_path(&path).display());
             Ok(())
         }
     }
 
-    // just
-
-    // let cmd = Command::new("electron")
-    //     .current_dir(TESTDIR)
-    //     .arg("./resources/app")
-    //     .arg("--in-process-gpu")
-    //     .spawn()?
-    //     .wait();
-
-    // println!("{:?}", cmd);
 }

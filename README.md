@@ -12,7 +12,11 @@ Please check [this list](https://steamdb.info/tech/Container/Electron/) to see i
 
 Inspired by [NativeCookie](https://github.com/Kesefon/NativeCookie/).
 
-Currently, only [Cookie Clicker](https://orteil.dashnet.org/cookieclicker/) is supported at the moment.
+This program should support almost all Electron-based games, including but not limited to:
+
+- [Cookie Clicker](https://store.steampowered.com/app/1454400/Cookie_Clicker)
+- [We Become What We Behold](https://store.steampowered.com/app/1103210/We_Become_What_We_Behold_FanMade_Port)
+- [natsuno-kanata](https://store.steampowered.com/app/1684660/natsunokanata__beyond_the_summer)
 
 ## Planned features
 
@@ -45,7 +49,7 @@ build rather than running Electron inside Steam Proton.
 
 ## Usage
 
-1. Install Electron from your package manager, or download the binaries from the [Electron website](https://www.electronjs.org/) (see note below)
+1. Install Electron from your package manager, or download the binaries from the [Electron website](https://www.electronjs.org/) (see note below), make sure the `electron` binary is in your `$PATH`.
 2. Download the latest release tarball
 3. Extract to `~/.steam/root/compatibilitytools.d/`. You should have a directory structure like this:
    ```
@@ -77,12 +81,10 @@ The resulting Steam compatibility tool will be outputted to `build/`. You can ju
   ELECTRON_PATH=/path/to/electron %command%
   ```
 - Due to some incompatibility issues with the Steam overlay, it's recommended to disable the Steam overlay for the game you're running with Boson. Boson is currently hardcoded to remove any `LD_PRELOAD` envars on runtime, to prevent the Steam overlay from being loaded.
-- If you're trying to run some other Electron-based game that isn't Cookie Clicker that doesn't have the game path set to `resources/app`, you can set the `BOSON_LOAD_PATH` environment variable in your Steam launch options to point to the game's resource path (a plain folder or an `app.asar` file), e.g:
+- Boson has a list of known ASAR paths that it checks through to find the game's files, if Boson somehow cannot find the electron ASAR assets path, you can set a custom environment variable to tell Boson where to find the game data, e.g:
   ```
-  BOSON_LOAD_PATH=/path/to/game/resources/app %command%
+  BOSON_LOAD_PATH=/path/to/asar %command%
   ```
-  Note that paths here are relative to the game's installation directory.
-
 ### Running Cookie Clicker (and other Greenworks games) with Boson
 
 This guide assumes you already bought Cookie Clicker on Steam, and have it installed.
