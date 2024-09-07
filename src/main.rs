@@ -61,7 +61,8 @@ fn main() -> Result<()> {
             let mut args = vec![];
 
             let gpath = path_search::get_game_path(&game_path);
-            let app_path_str = get_asar_path(&gpath).ok_or_eyre(
+            // Actually get the game executable path here
+            let app_path_str = get_asar_path(&game_path).ok_or_eyre(
                 "Could not find ASAR file in game directory. Make sure you're running this from the game directory.",
             )?;
             args.push(app_path_str.to_str().unwrap());

@@ -1,6 +1,6 @@
 [package]
 name = "boson"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 license = "MIT"
 authors = ["Pornpipat Popum <cappy@fyralabs.com>"]
@@ -18,5 +18,6 @@ categories = [
 [dependencies]
 clap = { version = "~4", features = ["derive"] }
 color-eyre = "~0.6"
+serde_json = "1.0.128"
 tracing = { version = "~0.1", features = ["log"] }
 tracing-subscriber = { version = "~0.3", features = ["env-filter"] }

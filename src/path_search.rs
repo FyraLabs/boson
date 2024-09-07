@@ -22,30 +22,101 @@ pub fn env_electron_path() -> String {
     std::env::var("ELECTRON_PATH").unwrap_or_else(|_| "electron".to_string())
 }
 
+// This function scans for a package.json file in the game directory
+// Does nothing for now except logging
+
+fn package_json_scan(path: &Path) {
+    use serde_json::Value;
+    use std::fs::File;
+    use std::io::Read;
+
+    // if is file
+    if path.is_file() {
+        tracing::info!("Path is a file, ignoring.");
+        return;
+    }
+
+    let package_json = path.join("package.json");
+    if package_json.exists() {
+        tracing::info!("Found package.json at {:?}", package_json);
+
+        // Try to open the file
+        let mut file = match File::open(&package_json) {
+            Ok(file) => file,
+            Err(e) => {
+                tracing::warn!("Failed to open package.json: {:?}", e);
+                return;
+            }
+        };
+
+        let mut contents = String::new();
+        if let Err(e) = file.read_to_string(&mut contents) {
+            tracing::warn!("Failed to read package.json: {:?}", e);
+            return;
+        }
+
+        let v: Value = match serde_json::from_str(&contents) {
+            Ok(v) => v,
+            Err(e) => {
+                tracing::warn!("Failed to parse package.json: {:?}", e);
+                return;
+            }
+        };
+
+        // Check if it's a valid Electron package
+        if v.get("main").is_none() {
+            tracing::warn!("package.json does not specify a main script, it may not be a valid Electron package.");
+        } else {
+            tracing::info!("Validated package.json as an Electron package");
+        }
+    } else {
+        tracing::warn!(
+            "Could not find package.json in game directory. This may not be the game directory."
+        );
+    }
+}
+
 /// Get ASAR path
 ///
 /// Accepts a game root directory, usually from `get_game_path()`
-pub fn get_asar_path(game_root: &Path) -> Option<PathBuf> {
+/// and returns the path to the ASAR
+#[tracing::instrument]
+pub fn get_asar_path(game_exec_path: &Path) -> Option<PathBuf> {
+    let game_path = get_game_path(game_exec_path);
+    tracing::trace!("Game path: {:?}", game_path);
     // First check if there's an override in the environment
     if let Some(path) = env_boson_load_path() {
-        return Some(game_root.join(path));
+        return Some(game_path.join(path));
     }
 
     // ASAR paths priority
     //
     // Unpacked folders are prioritized over ASAR files
     // as games may be unpacked for development or modding.
+    //
+    // todo: walk through every directory in the actual game path (except node_modules) and find a package.json with "main" pointing to the JS file
+    // if found, return that directory as the game path
+    // else find the ASAR archive
 
-    const ASAR_PATHS: [&str; 5] = [
-        "app.asar/",
+    const ASAR_PATHS: [&str; 4] = [
         "app.asar",
-        "resources/app.asar/",
+        "resources/app.asar.unpacked",
         "resources/app.asar",
-        "resources/app/",
+        "resources/app",
     ];
 
+    // Funny guard clause
+
+    // If the current game_path is actually one of (ends with) the actual ASAR path here, return it directly
+    if ASAR_PATHS.iter().any(|path| game_path.ends_with(path)) {
+        // find package.json
+        package_json_scan(&game_path);
+        tracing::info!("Found ASAR at {:?}", game_path);
+        return Some(game_path);
+    }
+
     for path in ASAR_PATHS.iter() {
-        let asar_path = game_root.join(path);
+        let asar_path = game_path.join(path);
         tracing::trace!("Checking path: {:?}", asar_path);
         if asar_path.exists() {
             if asar_path.is_dir() {
@@ -53,6 +124,7 @@ pub fn get_asar_path(game_root: &Path) -> Option<PathBuf> {
             } else {
                 tracing::info!("Found ASAR at {:?}", asar_path);
             }
+            package_json_scan(&asar_path);
             return Some(asar_path);
         }
     }
