@@ -11,7 +11,7 @@ all: pack-release
 dev: pack-dev
 
 build:
-	cargo build --release
+	cargo build --release $(CARGO_ARGS)
 
 build-dev:
 	cargo build
