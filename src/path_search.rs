@@ -76,13 +76,30 @@ fn package_json_scan(path: &Path) {
     }
 }
 
+fn _compat_data_path() -> Option<String> {
+    std::env::var("STEAM_COMPAT_DATA_PATH")
+        .ok()
+        .map(|s| PathBuf::from(s).join("boson"))
+        .map(|p| p.to_str().unwrap().to_string())
+}
+
 /// Get ASAR path
 ///
 /// Accepts a game root directory, usually from `get_game_path()`
 /// and returns the path to the ASAR
 #[tracing::instrument]
 pub fn get_asar_path(game_exec_path: &Path) -> Option<PathBuf> {
-    let game_path = get_game_path(game_exec_path);
+    let game_path = {
+        if let Ok(path) = std::env::var("STEAM_COMPAT_INSTALL_PATH") {
+            tracing::info!("STEAM_COMPAT_INSTALL_PATH found: {:?}", path);
+            path.into()
+        }
+        // If the game path is not provided, use the game executable path
+        else {
+            get_game_path(game_exec_path)
+        }
+    };
+
     tracing::trace!("Game path: {:?}", game_path);
     // First check if there's an override in the environment
     if let Some(path) = env_boson_load_path() {

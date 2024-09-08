@@ -2,7 +2,7 @@ DESTDIR=$(PWD)/build
 CRATE_DIR=$(PWD)
 TARGET_DIR=$(CRATE_DIR)/target
 CRATE_NAME=boson
-CARGO_ARGS=""
+CARGO_ARGS=
 CARGO_TARGET="release"
 
 .PHONY: build build-dev
@@ -20,6 +20,7 @@ pack-release: prep build
 	cp $(TARGET_DIR)/$(CARGO_TARGET)/$(CRATE_NAME) $(DESTDIR)/$(CRATE_NAME)
 	@echo "Copying assets"
 	cp -av $(CRATE_DIR)/assets/. $(DESTDIR)
+	pushd $(DESTDIR) && npm install && popd
 
 pack-dev: prep build-dev
 	ln -fv $(TARGET_DIR)/debug/$(CRATE_NAME) $(DESTDIR)/$(CRATE_NAME)

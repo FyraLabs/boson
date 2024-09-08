@@ -4,4 +4,6 @@
   "commandline_waitforexitandrun" "/boson run"
   "commandline_getnativepath" "/boson path"
   "commandline_getcompatpath" "/boson path"
+  "compatmanager_layer_name" "container-runtime"
+  "require_tool_appid" "1391110"
 }

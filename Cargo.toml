@@ -1,9 +1,10 @@
 [package]
 name = "boson"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 license = "MIT"
 authors = ["Pornpipat Popum <cappy@fyralabs.com>"]
+publish = false
 description = "Run Electron Steam games natively"
 readme = "README.md"
 repository = "https://github.com/FyraLabs/boson"

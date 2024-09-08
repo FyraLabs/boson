@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "override-require": "^1.1.1"
+  }
+}

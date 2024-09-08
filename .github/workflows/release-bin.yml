@@ -17,7 +17,11 @@ jobs:
               with:
                 toolchain: stable
                 target: x86_64-unknown-linux-musl
-            
+
+            - uses: actions/setup-node@v4
+              with:
+                node-version: 20
+
             - name: Build release binaries
               run: |
                   rustup target add x86_64-unknown-linux-musl
