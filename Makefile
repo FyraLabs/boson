@@ -10,6 +10,7 @@ CARGO_TARGET="release"
 all: pack-release
 dev: pack-dev
 
+
 build:
 	cargo build --release $(CARGO_ARGS)
 
@@ -21,13 +22,13 @@ pack-release: prep build
 	@echo "Copying assets"
 	cp -av $(CRATE_DIR)/assets/. $(DESTDIR)
 	pushd $(DESTDIR) && npm install && popd
+	DEST_DIR=$(DESTDIR) scripts/build_steamworksjs.sh
 
 pack-dev: prep build-dev
 	ln -fv $(TARGET_DIR)/debug/$(CRATE_NAME) $(DESTDIR)/$(CRATE_NAME)
 	@echo "Copying assets"
 	cp -av $(CRATE_DIR)/assets/. $(DESTDIR)
-
-
+	
 prep:
 	mkdir -p $(DESTDIR)
 

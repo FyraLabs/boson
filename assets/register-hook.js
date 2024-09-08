@@ -99,17 +99,19 @@ try {
     console.error(e);
 }
 
-const isOverride1 = (request, parent) => {
+const earlyOverride = (request, parent) => {
     // console.debug("PASS 1 CHECKING:", request);
     return request.includes("lib/greenworks-linux64");
 };
 
-const resolveRequest1 = (request, parent) => {
+const earlyResolve = (request, parent) => {
     console.debug("PASS 1 REQUEST:", request);
     return napi;
 };
 
-overrideRequire(isOverride1, resolveRequest1);
+// Early override pass
+
+overrideRequire(earlyOverride, earlyResolve);
 
 let greenworks;
 try {
@@ -125,16 +127,32 @@ try {
 // Second hook pass: Replace the actual game import for greenworks, so that it points to our custom greenworks module
 
 const isOverride = (request) => {
-    console.debug("Checking:", request);
-    return request.includes("greenworks/greenworks");
-    // return false;
+    console.debug("Trying to load", request);
+    
+    if (request.includes("greenworks/greenworks")
+        || request.includes("steamworks.js")
+    ) {
+        console.debug("OVERRIDE:", request);
+        return true
+    }
+    // return request.includes("steamworks.js");
+    return false;
 };
 
 const resolveRequest = (request) => {
-    console.debug("Request:", request);
-    let out = greenworks;
+    console.debug("Parsing Request:", request);
+    
+    if (request.includes("steamworks.js")) {
+        console.log("Returning steamworks.js loader", __dirname + "/lib/steamworksjs");
+        return require(__dirname + "/lib/steamworksjs");
+    }
+    
+    if (request.includes("greenworks/greenworks")) {
+        console.log("Returning Greenworks module", greenworks);
+        return greenworks;
+    }
 
-    return out;
+    // return greenworks;
 };
 
 overrideRequire(isOverride, resolveRequest);
