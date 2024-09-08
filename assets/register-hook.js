@@ -109,7 +109,7 @@ const resolveRequest1 = (request, parent) => {
     return napi;
 };
 
-const restoreOverride1 = overrideRequire(isOverride1, resolveRequest1);
+overrideRequire(isOverride1, resolveRequest1);
 
 let greenworks;
 try {
@@ -117,8 +117,6 @@ try {
 } catch (e) {
     console.error(e);
 }
-
-restoreOverride1();
 
 // console.log("Greenworks:", greenworks);
 
