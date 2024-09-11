@@ -19,6 +19,7 @@ pub struct Boson {
 }
 #[derive(Subcommand)]
 pub enum Commands {
+    #[command(alias = "waitforexitandrun")]
     Run {
         game_path: PathBuf,
         // do not parse any further, treat all further arguments here as just vec of strings
