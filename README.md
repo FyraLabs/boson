@@ -66,7 +66,7 @@ build rather than running Electron inside Steam Proton.
 
 ## Building
 
-You require Rust and Node.js to build Boson.
+You require Rust and Node.js + NPM to build Boson.
 
 Install Rust by using [rustup](https://rustup.rs/), and then run the following commands:
 
