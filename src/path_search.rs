@@ -3,7 +3,42 @@
 //! This module is a helper to quickly find the path to the Electron app's ASAR file by looking for them in common locations.
 //!
 //! It also supports checking the environment variable `BOSON_LOAD_PATH` for a custom path.
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    process,
+};
+
+/// Returns a list of load paths, from the factory Boson database
+/// + any additional user configured paths
+///
+/// Load priority:
+/// - ~/.config/boson.d/<gameid>.toml
+/// - ~/<steam>/compatibilitytools.d/boson/data/<gameid>.toml
+pub fn config_load_paths() -> Vec<PathBuf> {
+    let mut paths = Vec::new();
+
+    let userconfig_dir = dirs::config_dir().and_then(|f| Some(f.join("boson.d")));
+    if let Some(dir) = userconfig_dir {
+        paths.push(dir);
+    }
+
+    let exec_path = std::env::current_exe().unwrap_or_else(|e| {
+        tracing::error!("Failed to get current executable path: {:?}", e);
+        process::exit(1);
+    });
+
+    let steam_compat_path = exec_path.parent().map(|p| p.join("data"));
+
+    tracing::debug!("Steam compatibility data path: {:?}", steam_compat_path);
+
+    if let Some(dir) = steam_compat_path {
+        paths.push(dir);
+    }
+
+    tracing::debug!("Config load paths: {:?}", paths);
+
+    paths
+}
 
 pub fn env_boson_load_path() -> Option<String> {
     std::env::var("BOSON_LOAD_PATH").ok()

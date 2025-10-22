@@ -48,7 +48,27 @@ function http_get(url) {
             response.headers.location
         ) {
             console.log("Following redirect to:", response.headers.location);
+            file.close();
+            fs.unlinkSync(napiPath); // Clean up partial file
             http_get(response.headers.location);
+            return;
+        } else if (response.statusCode !== 200) {
+            console.error(
+                `Failed to download NAPI file: HTTP ${response.statusCode}`,
+            );
+            file.close();
+            fs.unlinkSync(napiPath); // Clean up partial file
+            return;
+        } else if (
+            response.headers["content-type"] &&
+            response.headers["content-type"].includes("text/html")
+        ) {
+            console.error(
+                "Failed to download NAPI file: Server returned HTML (likely 404 page)",
+            );
+            file.close();
+            fs.unlinkSync(napiPath); // Clean up partial file
+            return;
         } else {
             response.pipe(file);
         }
@@ -61,6 +81,14 @@ function http_get(url) {
             );
             napi = require(napiPathNoExt);
         });
+    });
+
+    request.on("error", function (err) {
+        console.error("Failed to download NAPI file:", err.message);
+        file.close();
+        if (fs.existsSync(napiPath)) {
+            fs.unlinkSync(napiPath); // Clean up partial file
+        }
     });
 }
 
@@ -78,7 +106,7 @@ function attempt_download_napi() {
     try {
         // recursively create the directory
 
-        const url = `https://github.com/ElectronForConstruct/greenworks-prebuilds/releases/download/v0.8.0/${napi_filename}`;
+        const url = `https://github.com/ElectronForConstruct/greenworks-prebuilds/releases/download/v0.10.0/${napi_filename}`;
 
         const file = fs.createWriteStream(napiPath);
 
@@ -128,12 +156,13 @@ try {
 
 const isOverride = (request) => {
     console.debug("Trying to load", request);
-    
-    if (request.includes("greenworks/greenworks")
-        || request.includes("steamworks.js")
+
+    if (
+        request.includes("greenworks/greenworks") ||
+        request.includes("steamworks.js")
     ) {
         console.debug("OVERRIDE:", request);
-        return true
+        return true;
     }
     // return request.includes("steamworks.js");
     return false;
@@ -141,12 +170,15 @@ const isOverride = (request) => {
 
 const resolveRequest = (request) => {
     console.debug("Parsing Request:", request);
-    
+
     if (request.includes("steamworks.js")) {
-        console.log("Returning steamworks.js loader", __dirname + "/lib/steamworksjs");
+        console.log(
+            "Returning steamworks.js loader",
+            __dirname + "/lib/steamworksjs",
+        );
         return require(__dirname + "/lib/steamworksjs");
     }
-    
+
     if (request.includes("greenworks/greenworks")) {
         console.log("Returning Greenworks module", greenworks);
         return greenworks;

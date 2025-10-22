@@ -1,0 +1,34 @@
+# Boson Game Configuration Example
+# Place this file in ~/.config/boson.d/ or in your Steam compatibility tool data directory
+# Filename can be anything ending in .toml (e.g., my_games.toml, electron_games.toml, etc.)
+
+# Balatro - Force LOVE2D runtime with custom settings, load Lovely Injector
+[override.2379780]
+compat_type = "Love"
+wrapper_command = "/usr/bin/love"
+wrapper_args = ["--fused"]
+env_vars = { LOVE_GRAPHICS_USE_GL2 = "1", LOVE_WINDOW_VSYNC = "0" }
+append_args = ["--debug"]
+extra_preloads = ["liblovely.so"]
+disable_steam_overlay = false
+
+# Electron game example - Custom Electron path and environment
+[override.123456]
+compat_type = "Electron"
+wrapper_command = "/opt/electron/electron"
+wrapper_args = ["--no-sandbox", "--disable-gpu-sandbox"]
+env_vars = { ELECTRON_ENABLE_LOGGING = "1", ELECTRON_LOG_ASAR_READS = "1", NODE_ENV = "production" }
+append_args = ["--verbose"]
+extra_preloads = ["libxss.so.1"]
+disable_steam_overlay = true
+
+# Another game - Force native execution with custom environment
+[override.789012]
+compat_type = "ForceNative"
+env_vars = { LD_LIBRARY_PATH = "/usr/lib/custom", CUSTOM_GAME_VAR = "enabled" }
+append_args = ["--fullscreen", "--no-intro"]
+disable_steam_overlay = false
+
+# Minimal override - Just change compatibility type
+[override.999999]
+compat_type = "Electron"

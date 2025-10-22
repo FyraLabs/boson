@@ -1,6 +1,6 @@
 [package]
 name = "boson"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 license = "MIT"
 authors = ["Pornpipat Popum <cappy@fyralabs.com>"]
@@ -8,17 +8,19 @@ publish = false
 description = "Run Electron Steam games natively"
 readme = "README.md"
 repository = "https://github.com/FyraLabs/boson"
-categories = [
-    "accessibility",
-    "games",
-    "wasm",
-    "web-programming"
-]
+categories = ["accessibility", "games", "wasm", "web-programming"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-clap = { version = "~4", features = ["derive"] }
-color-eyre = "~0.6"
+clap = { version = "~4", features = ["derive", "env"] }
+stable-eyre = "0.2.2"
+serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.128"
+toml = "0.9.8"
 tracing = { version = "~0.1", features = ["log"] }
 tracing-subscriber = { version = "~0.3", features = ["env-filter"] }
+dirs = "6.0.0"
+jwalk = "0.8.1"
+
+[dev-dependencies]
+tempfile = "3.8"
