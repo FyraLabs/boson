@@ -137,7 +137,6 @@ impl Runtime {
 
         tracing::info!("Launching game with command: {:?}", cmd);
 
-
         let mut child = cmd.spawn()?;
         let status = child.wait()?;
         if !status.success() {
@@ -146,6 +145,6 @@ impl Runtime {
                 status
             ));
         }
-        Ok(())  
+        Ok(())
     }
 }
