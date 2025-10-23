@@ -16,6 +16,16 @@ pub struct Runtime {
     pub game_config: GameConfig,
     pub exec_path: std::path::PathBuf,
 }
+#[derive(Debug, serde::Deserialize)]
+pub struct ToolManifestVdf {
+    pub manifest: ToolManifest,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct ToolManifest {
+    pub commandline: String,
+    pub commandline_waitforexitandrun: Option<String>,
+}
 
 fn lookup_compat_tool(
     path: &str,
@@ -51,14 +61,41 @@ fn lookup_compat_tool(
         }
     }
 
-    tracing::debug!(path = path, "Compatibility tool not found in configured library paths");
+    tracing::debug!(
+        path = path,
+        "Compatibility tool not found in configured library paths"
+    );
     Ok(None)
 }
 
 /// Takes in a string path and returns the path to the compatibility tool wrapper if it exists
 /// i.e defer to Proton
-fn get_compat_tool_wrapper(path: &str) -> Result<Option<std::path::PathBuf>> {
-    todo!()
+fn get_compat_tool_wrapper(path: &Path) -> Result<Option<(std::path::PathBuf, Vec<String>)>> {
+    let toolmanifest_file = path.join("toolmanifest.vdf");
+    // manifest.
+    let toolmanifest_file = std::fs::File::open(toolmanifest_file)?;
+    let toolmanifest: ToolManifest = keyvalues_serde::from_reader(toolmanifest_file)?;
+    let cmdline = toolmanifest
+        .commandline
+        .strip_prefix('/')
+        .unwrap_or(&toolmanifest.commandline);
+
+    let mut iter = cmdline.split_whitespace();
+    if let Some(first) = iter.next() {
+        let expanded_path = shellexpand_full_no_errors(first).to_string();
+        let wrapper_path = if Path::new(&expanded_path).is_relative() {
+            // If path is relative, resolve it relative to the compat tool directory
+            path.join(expanded_path)
+        } else {
+            PathBuf::from(expanded_path)
+        };
+        let wrapper_args = iter
+            .map(|s| shellexpand_full_no_errors(s).to_string())
+            .collect::<Vec<String>>();
+        return Ok(Some((wrapper_path, wrapper_args)));
+    }
+    Ok(None)
+    // todo!()
 }
 
 fn shellexpand_full_no_errors(s: &str) -> std::borrow::Cow<'_, str> {
@@ -86,7 +123,6 @@ impl Runtime {
     }
 
     pub fn launch_game(&self, additional_args: Vec<String>) -> Result<()> {
-        
         tracing::trace!(?self, ?additional_args, "Launching game");
         let executable_path = match &self.game_config.compat_type {
             &crate::config::CompatType::Electron => {
@@ -98,22 +134,72 @@ impl Runtime {
             _ => self.exec_path.clone(),
         };
 
-        // todo: fix config merging
-        lookup_compat_tool("Proton - Experimental", &self.steam_opts)?;
+        // Handle DeferProton case - dynamically get wrapper from compat tool
+        let (wrapper, wrapper_args) = match &self.game_config.compat_type {
+            crate::config::CompatType::DeferProton => {
+                if let Some(tool_dir) = self.game_config.compat_tool_dir.as_deref() {
+                    let found =
+                        lookup_compat_tool(tool_dir, &self.steam_opts)?.ok_or_else(|| {
+                            stable_eyre::eyre::eyre!(
+                                "Compatibility tool '{}' not found in configured library paths",
+                                tool_dir
+                            )
+                        })?;
 
-        let (wrapper_default, wrapper_extras_default) =
-            self.game_config.compat_type.executable()?;
+                    tracing::debug!(?found, "Using compatibility tool from config");
 
-        let wrapper = self
-            .game_config
-            .wrapper_command
-            .as_ref()
-            .or(wrapper_default.as_ref());
+                    // Get wrapper command and args from the compat tool
+                    if let Some((wrapper_path, mut tool_wrapper_args)) =
+                        get_compat_tool_wrapper(&found)?
+                    {
+                        // Combine tool wrapper args with user config wrapper args
+                        tool_wrapper_args.extend(self.game_config.wrapper_args.clone());
 
-        let wrapper_args = {
-            let mut args = self.game_config.wrapper_args.clone();
-            args.extend(wrapper_extras_default);
-            args
+                        tool_wrapper_args
+                            .iter_mut()
+                            .for_each(|arg| *arg = arg.replace("%verb%", "run"));
+
+                        let wrapper_cmd = wrapper_path.to_string_lossy().to_string();
+                        tracing::debug!(
+                            ?wrapper_cmd,
+                            ?tool_wrapper_args,
+                            "DeferProton wrapper resolved"
+                        );
+
+                        (Some(wrapper_cmd), tool_wrapper_args)
+                    } else {
+                        tracing::warn!(
+                            "Could not parse compatibility tool wrapper, falling back to none"
+                        );
+                        (None, self.game_config.wrapper_args.clone())
+                    }
+                } else {
+                    tracing::warn!(
+                        "DeferProton set but no compat_tool_dir configured, falling back to none"
+                    );
+                    (None, self.game_config.wrapper_args.clone())
+                }
+            }
+            _ => {
+                // Standard behavior for other compat types
+                let (wrapper_default, wrapper_extras_default) =
+                    self.game_config.compat_type.executable()?;
+
+                let wrapper = self
+                    .game_config
+                    .wrapper_command
+                    .as_ref()
+                    .or(wrapper_default.as_ref())
+                    .cloned();
+
+                let wrapper_args = {
+                    let mut args = self.game_config.wrapper_args.clone();
+                    args.extend(wrapper_extras_default);
+                    args
+                };
+
+                (wrapper, wrapper_args)
+            }
         };
 
         tracing::debug!(?wrapper, "Wrapper executable");

@@ -1,8 +1,8 @@
 # Balatro - Force LOVE2D runtime with custom settings, load Lovely Injector
 [override.2379780]
-compat_type = "Love"
+compat_type = "DeferProton"
 wrapper_command = "/usr/bin/love"
-#extra_preloads = ["liblovely.so"]
+extra_preloads = ["liblovely.so"]
 
 [override.2379780.env_vars]
 LOVE_WINDOW_VSYNC = "0"

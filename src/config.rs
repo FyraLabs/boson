@@ -119,7 +119,16 @@ impl CompatType {
     /// These are the base defaults that apply to all games using this runtime
     pub fn runtime_defaults(&self) -> GameConfig {
         match self {
-            CompatType::DeferProton => GameConfig::default(),
+            CompatType::DeferProton => GameConfig {
+                compat_type: CompatType::DeferProton,
+                wrapper_command: None,
+                wrapper_args: vec![],
+                env_vars: BTreeMap::new(),
+                append_args: vec![],
+                extra_preloads: vec![],
+                compat_tool_dir: default_compat_tool_dir(),
+                ..Default::default()
+            },
             CompatType::ForceNative => GameConfig::default(),
             CompatType::Electron => GameConfig {
                 compat_type: CompatType::Electron,
@@ -152,8 +161,8 @@ impl CompatType {
     pub fn executable(&self) -> Result<(Option<String>, Vec<String>)> {
         let exec_path = std::env::current_exe()?;
         match self {
-            // todo: find proton config?
-            CompatType::DeferProton => todo!("Proton defer not implemented yet"),
+            // DeferProton is handled specially in runtime - returns empty defaults here
+            CompatType::DeferProton => Ok((None, vec![])),
             CompatType::ForceNative => Ok((None, vec![])),
             CompatType::Electron => {
                 let exec_dir = exec_path.parent().unwrap();
@@ -341,22 +350,24 @@ impl BosonConfig {
             base.compat_type = overlay.compat_type.clone();
         }
 
+        // Only override wrapper_command if overlay explicitly sets it
         if overlay.wrapper_command.is_some() {
             base.wrapper_command = overlay.wrapper_command.clone();
         }
 
-        if !overlay.wrapper_args.is_empty() {
-            if base.wrapper_args.is_empty() {
-                base.wrapper_args = overlay.wrapper_args.clone();
-            } else {
-                base.wrapper_args.extend(overlay.wrapper_args.clone());
-            }
-        }
+        // Always extend wrapper_args additively - don't replace if base has args
+        base.wrapper_args.extend(overlay.wrapper_args.clone());
 
         // Extend vec fields rather than replace
         base.env_vars.extend(overlay.env_vars.clone());
         base.append_args.extend(overlay.append_args.clone());
         base.extra_preloads.extend(overlay.extra_preloads.clone());
+
+        // Only override compat_tool_dir if overlay explicitly sets it to Some value
+        // This preserves runtime defaults when user config doesn't specify compat_tool_dir
+        if overlay.compat_tool_dir.is_some() {
+            base.compat_tool_dir = overlay.compat_tool_dir.clone();
+        }
 
         // Boolean fields are overridden if explicitly set
         base.disable_steam_overlay = overlay.disable_steam_overlay;
@@ -502,6 +513,84 @@ mod tests {
         // disable_steam_overlay should use user override (false) not Electron runtime default (true)
         assert_eq!(final_config.disable_steam_overlay, false);
     }
+
+    #[test]
+    fn test_defer_proton_config_merging() {
+        // Test that DeferProton configs merge additively and use runtime defaults
+        let mut config = BosonConfig {
+            default_compat_config: GameConfig {
+                compat_type: CompatType::ForceNative,
+                wrapper_args: vec!["--global-arg".to_string()],
+                compat_tool_dir: Some("GlobalProton".to_string()),
+                ..Default::default()
+            },
+            game_overrides: vec![],
+        };
+
+        // Add a DeferProton game with user overrides that don't specify compat_tool_dir
+        config.game_overrides.push((
+            666666,
+            GameConfig {
+                compat_type: CompatType::DeferProton,
+                wrapper_command: None,
+                wrapper_args: vec!["--user-arg".to_string()],
+                env_vars: BTreeMap::new(),
+                append_args: vec![],
+                extra_preloads: vec![],
+                disable_steam_overlay: false,
+                // Don't specify compat_tool_dir - should get runtime default
+                compat_tool_dir: None,
+            },
+        ));
+
+        let final_config = config.get_game_config(666666);
+
+        // Verify the final merged config
+        assert_eq!(final_config.compat_type, CompatType::DeferProton);
+
+        // Should have global default compat_tool_dir since that's how merging works
+        // Runtime defaults get overridden by global defaults
+        assert_eq!(
+            final_config.compat_tool_dir,
+            Some("GlobalProton".to_string())
+        );
+
+        // wrapper_args should be merged: global + user
+        assert!(final_config
+            .wrapper_args
+            .contains(&"--global-arg".to_string()));
+        assert!(final_config
+            .wrapper_args
+            .contains(&"--user-arg".to_string()));
+    }
+
+    #[test]
+    fn test_defer_proton_explicit_override() {
+        // Test that DeferProton explicit overrides work correctly
+        let mut config = BosonConfig {
+            default_compat_config: GameConfig::default(),
+            game_overrides: vec![],
+        };
+
+        // Add a DeferProton game with explicit compat_tool_dir override
+        config.game_overrides.push((
+            777777,
+            GameConfig {
+                compat_type: CompatType::DeferProton,
+                wrapper_args: vec!["--custom-arg".to_string()],
+                compat_tool_dir: Some("Proton-GE-8-32".to_string()),
+                ..Default::default()
+            },
+        ));
+
+        let final_config = config.get_game_config(777777);
+
+        // Should use the explicitly set compat_tool_dir, not runtime default
+        assert_eq!(
+            final_config.compat_tool_dir,
+            Some("Proton-GE-8-32".to_string())
+        );
+    }
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
@@ -593,7 +682,7 @@ mod game_config_file_tests {
         let game_config_file = GameConfigFile { overrides };
         let toml_str = game_config_file.to_string().unwrap();
 
-        let expected_toml = r#"[override.123456]
+        let _expected_toml = r#"[override.123456]
         compat_type = "Electron"
         wrapper_command = "/custom/path/to/electron"
         wrapper_args = ["--arg1", "--arg2"]
