@@ -2,7 +2,7 @@
 [override.2379780]
 compat_type = "Love"
 wrapper_command = "/usr/bin/love"
-wrapper_args = ["--fused"]
-env_vars = { LOVE_GRAPHICS_USE_GL2 = "1", LOVE_WINDOW_VSYNC = "0" }
-append_args = ["--debug"]
 #extra_preloads = ["liblovely.so"]
+
+[override.2379780.env_vars]
+LOVE_WINDOW_VSYNC = "0"

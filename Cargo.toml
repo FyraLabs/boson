@@ -21,6 +21,7 @@ tracing = { version = "~0.1", features = ["log"] }
 tracing-subscriber = { version = "~0.3", features = ["env-filter"] }
 dirs = "6.0.0"
 jwalk = "0.8.1"
+shellexpand = "3.1.1"
 
 [dev-dependencies]
 tempfile = "3.8"

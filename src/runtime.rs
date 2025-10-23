@@ -3,16 +3,73 @@
 //! This actually does the actual calling logic to we can actually run the games and stuff
 //!
 //! should replace the messy spaghetti in main.rs
+use std::path::{Path, PathBuf};
+
 use crate::{
     config::{GameConfig, SteamCompatConfig},
     path_search::get_asar_path,
 };
 use stable_eyre::Result;
-
+#[derive(Debug)]
 pub struct Runtime {
     pub steam_opts: SteamCompatConfig,
     pub game_config: GameConfig,
     pub exec_path: std::path::PathBuf,
+}
+
+fn lookup_compat_tool(
+    path: &str,
+    steam_compat_config: &SteamCompatConfig,
+) -> Result<Option<PathBuf>> {
+    // Build the list of library paths to search. The STEAM_LIBRARY_PATHS env/config is required.
+    let mut lib_paths = std::env::split_paths(
+        steam_compat_config
+            .library_paths
+            .as_ref()
+            .ok_or_else(|| stable_eyre::eyre::eyre!("STEAM_LIBRARY_PATHS is not set"))?,
+    )
+    .map(|p| p.join("common"))
+    .collect::<Vec<_>>();
+
+    // If a client install path is configured, add its compatibilitytools.d folder to the search list.
+    if let Some(client_install) = &steam_compat_config.client_install_path {
+        lib_paths.push(client_install.join("compatibilitytools.d"));
+    }
+
+    tracing::trace!(
+        ?lib_paths,
+        "Library paths to search for compatibility tools"
+    );
+
+    // Search each library path for a directory matching `path`.
+    for base in lib_paths {
+        let candidate = base.join(path);
+        tracing::trace!(?candidate, "Checking for compatibility tool candidate");
+        if candidate.exists() && candidate.is_dir() {
+            tracing::debug!(?candidate, "Found compatibility tool");
+            return Ok(Some(candidate));
+        }
+    }
+
+    tracing::debug!(path = path, "Compatibility tool not found in configured library paths");
+    Ok(None)
+}
+
+/// Takes in a string path and returns the path to the compatibility tool wrapper if it exists
+/// i.e defer to Proton
+fn get_compat_tool_wrapper(path: &str) -> Result<Option<std::path::PathBuf>> {
+    todo!()
+}
+
+fn shellexpand_full_no_errors(s: &str) -> std::borrow::Cow<'_, str> {
+    let home: String = dirs::home_dir()
+        .and_then(|p| p.to_str().map(|s| s.to_owned()))
+        .unwrap_or_default();
+    shellexpand::full_with_context_no_errors::<str, _, _, String, _>(
+        s,
+        || Some(home.clone()),
+        |var| std::env::var(var).ok(),
+    )
 }
 
 impl Runtime {
@@ -29,6 +86,8 @@ impl Runtime {
     }
 
     pub fn launch_game(&self, additional_args: Vec<String>) -> Result<()> {
+        
+        tracing::trace!(?self, ?additional_args, "Launching game");
         let executable_path = match &self.game_config.compat_type {
             &crate::config::CompatType::Electron => {
                 // find the ASAR path
@@ -38,6 +97,9 @@ impl Runtime {
             }
             _ => self.exec_path.clone(),
         };
+
+        // todo: fix config merging
+        lookup_compat_tool("Proton - Experimental", &self.steam_opts)?;
 
         let (wrapper_default, wrapper_extras_default) =
             self.game_config.compat_type.executable()?;
@@ -59,12 +121,15 @@ impl Runtime {
 
         let ld_preload = {
             let mut preloads = vec![];
-            let mut extra_preloads = self.game_config.extra_preloads.clone();
+            let extra_preloads = self.game_config.extra_preloads.clone();
             if let Ok(existing) = std::env::var("LD_PRELOAD") {
                 tracing::debug!(?existing, "Existing LD_PRELOAD found");
                 // Split the existing LD_PRELOAD by colons and add each path separately
                 let filtered_preloads = std::env::split_paths(&existing)
-                    .filter_map(|path| path.to_str().map(|s| s.to_string()))
+                    .filter_map(|path| {
+                        path.to_str()
+                            .map(|s| shellexpand_full_no_errors(s).to_string())
+                    })
                     .filter(|s| !s.is_empty())
                     .filter(|s| {
                         // Filter out Steam overlay if disabled in config
@@ -92,7 +157,10 @@ impl Runtime {
             if let Ok(existing) = std::env::var("LD_LIBRARY_PATH") {
                 tracing::debug!(?existing, "Existing LD_LIBRARY_PATH found");
                 let existing_paths = std::env::split_paths(&existing)
-                    .filter_map(|path| path.to_str().map(|s| s.to_string()))
+                    .filter_map(|path| {
+                        path.to_str()
+                            .map(|s| shellexpand_full_no_errors(s).to_string())
+                    })
                     .filter(|s| !s.is_empty());
                 paths.extend(existing_paths);
             }
@@ -132,7 +200,7 @@ impl Runtime {
 
         // Add extra envars
         for (key, value) in &self.game_config.env_vars {
-            cmd.env(key, value);
+            cmd.env(key, shellexpand_full_no_errors(value).to_string());
         }
 
         tracing::info!("Launching game with command: {:?}", cmd);

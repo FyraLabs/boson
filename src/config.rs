@@ -129,6 +129,7 @@ impl CompatType {
                 append_args: vec![],
                 extra_preloads: vec![],
                 disable_steam_overlay: true,
+                ..Default::default()
             },
             CompatType::Love => GameConfig {
                 compat_type: CompatType::Love,
@@ -138,6 +139,7 @@ impl CompatType {
                 append_args: vec![],
                 extra_preloads: vec![],
                 disable_steam_overlay: false,
+                ..Default::default()
             },
         }
     }
@@ -184,12 +186,7 @@ pub fn default_game_configs() -> Vec<(u32, GameConfig)> {
             2379780,
             GameConfig {
                 compat_type: CompatType::Love,
-                wrapper_command: None,
-                wrapper_args: vec![],
-                env_vars: BTreeMap::new(),
-                append_args: vec![],
-                extra_preloads: vec![],
-                disable_steam_overlay: false,
+                ..Default::default()
             },
         ),
         // Cookie Clicker: use Electron
@@ -197,12 +194,8 @@ pub fn default_game_configs() -> Vec<(u32, GameConfig)> {
             1454400,
             GameConfig {
                 compat_type: CompatType::Electron,
-                wrapper_command: None,
-                wrapper_args: vec![],
-                env_vars: BTreeMap::new(),
-                append_args: vec![],
-                extra_preloads: vec![],
                 disable_steam_overlay: true,
+                ..Default::default()
             },
         ),
     ]
@@ -418,6 +411,7 @@ mod tests {
                 append_args: vec!["--custom-arg".to_string()],
                 extra_preloads: vec![],
                 disable_steam_overlay: false, // User wants to override runtime default
+                ..Default::default()
             },
         ));
 
@@ -444,6 +438,7 @@ mod tests {
                 append_args: vec!["--global-append".to_string()],
                 extra_preloads: vec!["libglobal.so".to_string()],
                 disable_steam_overlay: false,
+                ..Default::default()
             },
             game_overrides: vec![],
         };
@@ -459,6 +454,7 @@ mod tests {
                 append_args: vec!["--user-append".to_string()],
                 extra_preloads: vec!["libuser.so".to_string()],
                 disable_steam_overlay: false, // Override Electron runtime default
+                ..Default::default()
             },
         ));
 
@@ -508,7 +504,7 @@ mod tests {
     }
 }
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
 #[serde(default)]
 pub struct GameConfig {
     pub compat_type: CompatType,
@@ -531,6 +527,20 @@ pub struct GameConfig {
     /// Disable Steam Overlay for this game
     /// May fix some compatibility issues
     pub disable_steam_overlay: bool,
+
+    /// Specify the directory of the compatibility tool to use
+    /// This is for deferring to another compatibility tool like Proton
+    ///
+    /// If not set, this will default to "Proton - Experimental"
+    ///
+    /// This looks up the compatibility tool in Steam's compatibilitytools.d directory
+    /// or the Steam library paths
+    #[serde(default = "default_compat_tool_dir")]
+    pub compat_tool_dir: Option<String>,
+}
+
+fn default_compat_tool_dir() -> Option<String> {
+    Some("Proton - Experimental".to_string())
 }
 
 /// Game config file on disk, used for storing factory defaults and user overrides
@@ -576,6 +586,7 @@ mod game_config_file_tests {
                 append_args: vec!["--game-arg".to_string()],
                 extra_preloads: vec!["libcustom.so".to_string()],
                 disable_steam_overlay: true,
+                ..Default::default()
             },
         );
 
