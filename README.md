@@ -155,7 +155,7 @@ LOVELY_MODS_DIR=/path/to/Mods %command%
 Boson will not come included with Lovely Injector as the library may be updated frequently, and including it may cause compatibility issues.
 
 > [!NOTE]
-> The default Balatro preset config launches the game with the `--fused` global LOVE option, which tells LOVE that the game is packaged as a single fused `.love` bundle. This also changes the game's save directory to `~/.local/share/Balatro` instead of the usual `~/.local/share/love/Balatro`.
+> The default Balatro preset config launches the game with the `--fused` global LOVE option, which tells LOVE that the game is packaged as a single fused `.love` bundle. This also changes the game's save directory to `~/.local/share/Balatro` instead of the usual `~/.local/share/love/Balatro`. See the [LOVE documentation](https://love2d-community.github.io/love-api/#filesystem_isFused) for more information.
 >
 > You may also want to symlink this to to `/home/cappy/.local/share/Steam/steamapps/compatdata/2379780/pfx/drive_c/users/steamuser/AppData/Roaming/Balatro` for compatibility with Steam Cloud saves for syncing saves between devices.
 
