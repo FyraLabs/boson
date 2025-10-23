@@ -8,6 +8,19 @@ use std::{
     process,
 };
 
+pub fn global_config_path() -> Option<PathBuf> {
+    if let Some(config_dir) = dirs::config_dir() {
+        let cfg = config_dir.join("boson.toml");
+        if cfg.is_file() {
+            Some(cfg)
+        } else {
+            None
+        }
+    } else {
+        None
+    }
+}
+
 /// Returns a list of load paths, from the factory Boson database
 /// + any additional user configured paths
 ///

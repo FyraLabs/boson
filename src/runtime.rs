@@ -16,10 +16,6 @@ pub struct Runtime {
     pub game_config: GameConfig,
     pub exec_path: std::path::PathBuf,
 }
-#[derive(Debug, serde::Deserialize)]
-pub struct ToolManifestVdf {
-    pub manifest: ToolManifest,
-}
 
 #[derive(Debug, serde::Deserialize)]
 pub struct ToolManifest {
