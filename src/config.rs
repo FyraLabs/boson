@@ -343,10 +343,11 @@ impl BosonConfig {
     /// Static version of merge_config for use without self reference
     fn merge_config_static(base: &mut GameConfig, overlay: &GameConfig) {
         // Only override compat_type if overlay has a different one
-        if !matches!(
-            (&overlay.compat_type, &base.compat_type),
-            (CompatType::Love, CompatType::Love)
-        ) {
+
+        if base.compat_type != overlay.compat_type {
+            tracing::trace!(base_compat_type = ?base.compat_type,
+                overlay_compat_type = ?overlay.compat_type,
+                "Merging compat_type");
             base.compat_type = overlay.compat_type.clone();
         }
 

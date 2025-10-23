@@ -15,6 +15,7 @@ pub struct Runtime {
     pub steam_opts: SteamCompatConfig,
     pub game_config: GameConfig,
     pub exec_path: std::path::PathBuf,
+    pub compat_tool_path: std::path::PathBuf,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -111,10 +112,19 @@ impl Runtime {
         game_config: GameConfig,
         exec_path: std::path::PathBuf,
     ) -> Self {
+        let current_exec_path = std::env::current_exe().unwrap_or_else(|e| {
+            tracing::error!("Failed to get current executable path: {:?}", e);
+            Default::default()
+        });
+        let compat_tool_path = current_exec_path.parent().unwrap_or_else(|| {
+            tracing::error!("Failed to get compat tool path! Will use Current working directory!");
+            Path::new(".")
+        });
         Self {
             steam_opts,
             game_config,
             exec_path,
+            compat_tool_path: compat_tool_path.to_path_buf(),
         }
     }
 
@@ -129,6 +139,7 @@ impl Runtime {
             }
             _ => self.exec_path.clone(),
         };
+        let boson_lib_dir = self.compat_tool_path.join("lib");
 
         // Handle DeferProton case - dynamically get wrapper from compat tool
         let (wrapper, wrapper_args) = match &self.game_config.compat_type {
@@ -247,12 +258,9 @@ impl Runtime {
                 paths.extend(existing_paths);
             }
             // Add boson lib directory if it exists
-            let exec_path = std::env::current_exe()?;
-            if let Some(exec_dir) = exec_path.parent() {
-                let lib_dir = exec_dir.join("lib");
-                if lib_dir.exists() {
-                    paths.push(lib_dir.display().to_string());
-                }
+
+            if boson_lib_dir.exists() {
+                paths.push(boson_lib_dir.display().to_string());
             }
 
             if self.game_config.disable_steam_overlay {
@@ -279,6 +287,22 @@ impl Runtime {
 
         cmd.env("LD_PRELOAD", ld_preload)
             .env("LD_LIBRARY_PATH", ld_library_path);
+
+        // todo: bundle luasteam and some other stuff in our LOVE runtime
+        if self.game_config.compat_type == crate::config::CompatType::Love {
+            tracing::info!("LOVE2D runtime chosen! Appending additional LuaJIT load paths");
+            // LUA_CPATH="/home/cappy/Projects/boson/build/lib/?.so;;"
+            // Append LuaJIT paths
+            let libdir_str = boson_lib_dir.display();
+            cmd.env(
+                "LUA_CPATH",
+                format!("{libdir_str}/love/?.so;;"),
+            );
+            cmd.env(
+                "LUA_PATH",
+                format!("{libdir_str}/love/?.lua;;"),
+            );
+        }
 
         // Add extra envars
         for (key, value) in &self.game_config.env_vars {

@@ -3,6 +3,9 @@
 compat_type = "Love"
 #wrapper_command = "/usr/bin/love"
 extra_preloads = ["liblovely.so"]
+# --fused changes the data directory to ~/.local/share/Balatro
+# if not specified, it uses the default ~/.local/share/love/Balatro
+wrapper_args = ["--fused"]
 
 [override.2379780.env_vars]
 LOVE_WINDOW_VSYNC = "0"
