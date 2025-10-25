@@ -31,8 +31,8 @@ pub enum Commands {
         game_path: PathBuf,
         // do not parse any further, treat all further arguments here as just vec of strings
         // e.g unknown args get added here
-        #[arg(trailing_var_arg = true)]
-        #[arg(allow_hyphen_values = true)]
+        #[clap(trailing_var_arg = true)]
+        #[clap(allow_hyphen_values = true)]
         additional_args: Vec<String>,
     },
 
@@ -45,6 +45,7 @@ fn main() -> Result<()> {
 
     tracing_subscriber::fmt()
         .with_env_filter(DEFAULT_LOG_LEVEL)
+        .without_time()
         .init();
 
     let appname = env!("CARGO_PKG_NAME");
@@ -71,7 +72,8 @@ fn main() -> Result<()> {
 
         tracing::trace!("{:#?}", args.steam_opts)
     });
-
+    let bosoncfg = BosonConfig::load()?;
+    let app_id = args.steam_opts.get_app_id().unwrap_or_default();
     match args.cmd {
         Commands::Run {
             game_path,
@@ -80,8 +82,6 @@ fn main() -> Result<()> {
             // todo: Move this to another function
             tracing::info!("Running game at path: {:?}", game_path);
 
-            let bosoncfg = BosonConfig::load()?;
-            let app_id = args.steam_opts.get_app_id().unwrap_or_default();
             let gamecfg = bosoncfg.get_game_config(app_id);
 
             tracing::info!(
@@ -95,70 +95,11 @@ fn main() -> Result<()> {
             let runtime = runtime::Runtime::new(args.steam_opts, gamecfg, game_path);
 
             runtime.launch_game(additional_args)?;
-
-            // let electron = path_search::env_electron_path();
-
-            // let mut args = vec!["--no-sandbox"];
-
-            // let gpath = path_search::get_game_path(&game_path);
-            // // Actually get the game executable path here
-            // let app_path_str = get_asar_path(&game_path).ok_or_eyre(
-            //     "Could not find ASAR file in game directory. Make sure you're running this from the game directory.",
-            // )?;
-
-            // // todo: path to boson hook
-            // let load_hook_arg = vec!["--require", hook_path.to_str().unwrap()];
-
-            // // Add the args before the app path
-            // args.extend(load_hook_arg.iter());
-            // args.extend(additional_args.iter().map(|s| s.as_str()));
-            // args.push(app_path_str.to_str().unwrap());
-
-            // tracing::info!(?gpath);
-
-            // tracing::debug!(?args);
-
-            // // Remove steam overlay from LD_PRELOAD
-
-            // let ld_preload = std::env::var("LD_PRELOAD").unwrap_or_default();
-            // // shadow the variable
-            // //
-            // // filter out the gameoverlayrenderer
-            // let ld_preload = std::env::split_paths(&ld_preload)
-            //     .filter(|x| {
-            //         x.to_str()
-            //             .map(|x| !x.contains("gameoverlayrenderer"))
-            //             .unwrap_or(true)
-            //     })
-            //     .collect::<Vec<_>>();
-
-            // let ld_preload = std::env::join_paths(ld_preload).unwrap();
-
-            // let ld_library_path = std::env::var("LD_LIBRARY_PATH").unwrap_or_default();
-            // let mut ld_library_path = std::env::split_paths(&ld_library_path).collect::<Vec<_>>();
-
-            // // add the exec_dir/lib to the LD_LIBRARY_PATH
-
-            // ld_library_path.push(exec_dir.join("lib"));
-
-            // let ld_library_path = std::env::join_paths(ld_library_path).unwrap();
-
-            // let mut cmd = Command::new(electron);
-            // cmd.current_dir(&gpath)
-            //     .env("LD_LIBRARY_PATH", ld_library_path)
-            //     // Do not preload any libraries, hack to fix Steam overlay
-            //     .env("LD_PRELOAD", ld_preload)
-            //     .args(args);
-
-            // let c = cmd.spawn()?.wait();
-
-            // if let Err(e) = c {
-            //     return Err(stable_eyre::eyre::eyre!(e));
-            // };
             Ok(())
         }
         Commands::Path { path } => {
-            println!("{}", path_search::get_game_path(&path).display());
+            let game_path = path_search::get_game_path(&path);
+            println!("{}", game_path.display());
             Ok(())
         }
     }

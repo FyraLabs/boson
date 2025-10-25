@@ -121,32 +121,18 @@ impl CompatType {
         match self {
             CompatType::DeferProton => GameConfig {
                 compat_type: CompatType::DeferProton,
-                wrapper_command: None,
-                wrapper_args: vec![],
                 env_vars: BTreeMap::new(),
-                append_args: vec![],
-                extra_preloads: vec![],
                 compat_tool_dir: default_compat_tool_dir(),
                 ..Default::default()
             },
             CompatType::ForceNative => GameConfig::default(),
             CompatType::Electron => GameConfig {
                 compat_type: CompatType::Electron,
-                wrapper_command: None,
-                wrapper_args: vec![],
-                env_vars: BTreeMap::new(),
-                append_args: vec![],
-                extra_preloads: vec![],
                 disable_steam_overlay: true,
                 ..Default::default()
             },
             CompatType::Love => GameConfig {
                 compat_type: CompatType::Love,
-                wrapper_command: None,
-                wrapper_args: vec![],
-                env_vars: BTreeMap::new(),
-                append_args: vec![],
-                extra_preloads: vec![],
                 disable_steam_overlay: false,
                 ..Default::default()
             },
@@ -228,7 +214,47 @@ impl Default for BosonConfig {
 impl BosonConfig {
     /// Load configuration from file or create default
     pub fn load() -> Result<Self> {
-        let mut config = BosonConfig::default();
+        let config_file: Option<PathBuf> = path_search::global_config_path();
+        let mut config = if let Some(cfg_path) = config_file {
+            tracing::info!("Loading global configuration from {:?}", cfg_path);
+            match Self::load_config_file(&cfg_path) {
+                Ok(mut cfg) => {
+                    tracing::info!("Loaded global configuration from {:?}", cfg_path);
+
+                    // Start with defaults and merge the loaded global default (override 0) on top,
+                    // so any undefined keys in the loaded config will fall back to defaults.
+                    let mut default_compat = GameConfig::default();
+                    if let Some(global_default) = cfg.defaults.take() {
+                        Self::merge_config_static(&mut default_compat, &global_default);
+                    }
+
+                    // For each game override, merge with defaults so missing fields use default settings
+                    let mut merged_overrides: Vec<(u32, GameConfig)> = Vec::new();
+                    for (id, game_cfg) in cfg.overrides.into_iter() {
+                        // cfg.overrides had id 0 removed above, so no need to skip here
+                        let mut merged = GameConfig::default();
+                        Self::merge_config_static(&mut merged, &game_cfg);
+                        merged_overrides.push((id, merged));
+                    }
+
+                    BosonConfig {
+                        default_compat_config: default_compat,
+                        game_overrides: merged_overrides,
+                    }
+                }
+                Err(e) => {
+                    tracing::error!(
+                        "Failed to load global config from {:?}: {}. Using defaults.",
+                        cfg_path,
+                        e
+                    );
+                    BosonConfig::default()
+                }
+            }
+        } else {
+            tracing::info!("No global configuration file found, using defaults.");
+            BosonConfig::default()
+        };
         let config_paths = path_search::config_load_paths();
 
         tracing::debug!("Loading configuration from paths: {:?}", config_paths);
@@ -257,7 +283,15 @@ impl BosonConfig {
                     Ok(game_config_file) => {
                         tracing::info!("Loaded config from: {:?}", file_path);
 
-                        // Merge the loaded overrides into our config
+                        // First, merge any defaults from this file into our global default config
+                        if let Some(file_defaults) = game_config_file.defaults {
+                            Self::merge_config_static(
+                                &mut config.default_compat_config,
+                                &file_defaults,
+                            );
+                        }
+
+                        // Then merge the loaded overrides into our config
                         for (app_id, game_config) in game_config_file.overrides {
                             // Check if we already have an override for this app_id
                             let existing_index = config
@@ -387,7 +421,6 @@ mod tests {
         assert_eq!(electron_defaults.disable_steam_overlay, true);
         assert!(electron_defaults.env_vars.is_empty());
 
-        // Test Love runtime defaults
         let love_defaults = CompatType::Love.runtime_defaults();
         assert_eq!(love_defaults.compat_type, CompatType::Love);
         assert_eq!(love_defaults.disable_steam_overlay, false);
@@ -397,12 +430,10 @@ mod tests {
     fn test_3_layer_config_merging() {
         let config = BosonConfig::default();
 
-        // Test Balatro (has user override for Love)
         let balatro_config = config.get_game_config(2379780);
         assert_eq!(balatro_config.compat_type, CompatType::Love);
         assert_eq!(balatro_config.disable_steam_overlay, false); // Love runtime default
 
-        // Test unknown app ID (uses default compat type which is Love)
         let unknown_config = config.get_game_config(999999);
         assert_eq!(unknown_config.compat_type, CompatType::DeferProton);
         assert_eq!(unknown_config.disable_steam_overlay, false);
@@ -472,14 +503,12 @@ mod tests {
 
         let final_config = config.get_game_config(555555);
 
-        // Verify the final merged config
         assert_eq!(final_config.compat_type, CompatType::Electron);
         assert_eq!(
             final_config.wrapper_command,
             Some("custom-electron".to_string())
         );
 
-        // wrapper_args should be merged: global + user (since user is non-empty, it extends)
         assert_eq!(
             final_config.wrapper_args,
             vec!["--global-arg".to_string(), "--user-arg".to_string()]
@@ -495,7 +524,6 @@ mod tests {
             Some(&"user_value".to_string())
         );
 
-        // append_args should be merged: runtime + global + user
         assert!(final_config
             .append_args
             .contains(&"--global-append".to_string()));
@@ -503,7 +531,6 @@ mod tests {
             .append_args
             .contains(&"--user-append".to_string()));
 
-        // extra_preloads should be merged: runtime + global + user
         assert!(final_config
             .extra_preloads
             .contains(&"libglobal.so".to_string()));
@@ -511,7 +538,6 @@ mod tests {
             .extra_preloads
             .contains(&"libuser.so".to_string()));
 
-        // disable_steam_overlay should use user override (false) not Electron runtime default (true)
         assert_eq!(final_config.disable_steam_overlay, false);
     }
 
@@ -643,6 +669,8 @@ fn default_compat_tool_dir() -> Option<String> {
 /// wrapper_command = "/custom/path/to/electron"
 #[derive(Serialize, Deserialize)]
 pub struct GameConfigFile {
+    #[serde(default)]
+    pub defaults: Option<GameConfig>,
     #[serde(rename = "override")]
     pub overrides: BTreeMap<u32, GameConfig>,
 }
@@ -680,7 +708,10 @@ mod game_config_file_tests {
             },
         );
 
-        let game_config_file = GameConfigFile { overrides };
+        let game_config_file = GameConfigFile {
+            defaults: None,
+            overrides,
+        };
         let toml_str = game_config_file.to_string().unwrap();
 
         let _expected_toml = r#"[override.123456]
@@ -754,5 +785,152 @@ wrapper_args = ["--love-arg"]
         let love_config = &loaded_config.overrides[&789012];
         assert_eq!(love_config.compat_type, CompatType::Love);
         assert!(love_config.wrapper_args.contains(&"--love-arg".to_string()));
+    }
+
+    #[test]
+    fn test_defaults_field_merging() {
+        use std::fs;
+        use tempfile::TempDir;
+
+        // Create a temporary directory structure
+        let temp_dir = TempDir::new().unwrap();
+        let config_dir = temp_dir.path().join("boson.d");
+        fs::create_dir_all(&config_dir).unwrap();
+
+        // Create a test config file with defaults
+        let test_config = r#"
+[defaults]
+compat_type = "Electron"
+wrapper_command = "/default/electron"
+env_vars = { DEFAULT_VAR = "default_value" }
+wrapper_args = ["--default-arg"]
+disable_steam_overlay = true
+
+[override.123456]
+compat_type = "Love"
+wrapper_command = "/custom/love"
+"#;
+
+        let config_file_path = config_dir.join("test_defaults.toml");
+        fs::write(&config_file_path, test_config).unwrap();
+
+        // Load the config file directly
+        let loaded_config = BosonConfig::load_config_file(&config_file_path).unwrap();
+
+        // Verify defaults are loaded
+        assert!(loaded_config.defaults.is_some());
+        let defaults = loaded_config.defaults.as_ref().unwrap();
+        assert_eq!(defaults.compat_type, CompatType::Electron);
+        assert_eq!(
+            defaults.wrapper_command,
+            Some("/default/electron".to_string())
+        );
+        assert_eq!(
+            defaults.env_vars.get("DEFAULT_VAR"),
+            Some(&"default_value".to_string())
+        );
+        assert!(defaults.wrapper_args.contains(&"--default-arg".to_string()));
+        assert_eq!(defaults.disable_steam_overlay, true);
+
+        // Verify overrides are still loaded correctly
+        assert_eq!(loaded_config.overrides.len(), 1);
+        let love_config = &loaded_config.overrides[&123456];
+        assert_eq!(love_config.compat_type, CompatType::Love);
+        assert_eq!(
+            love_config.wrapper_command,
+            Some("/custom/love".to_string())
+        );
+    }
+
+    #[test]
+    fn test_defaults_integration_with_load() {
+        use std::fs;
+        use tempfile::TempDir;
+
+        // Create a temporary directory structure that mimics the config loading
+        let temp_dir = TempDir::new().unwrap();
+        let config_dir = temp_dir.path().join("boson.d");
+        fs::create_dir_all(&config_dir).unwrap();
+
+        // Create a config file with defaults that should be merged into default_compat_config
+        let test_config = r#"
+[defaults]
+compat_type = "Electron"
+wrapper_command = "/global/electron"
+env_vars = { GLOBAL_VAR = "global_value", SHARED_VAR = "from_defaults" }
+wrapper_args = ["--global-arg"]
+disable_steam_overlay = true
+
+[override.123456]
+compat_type = "Love"
+env_vars = { SHARED_VAR = "from_override" }
+"#;
+
+        let config_file_path = config_dir.join("test_integration.toml");
+        fs::write(&config_file_path, test_config).unwrap();
+
+        // Since we can't easily mock the path_search functions, we'll test the merging logic
+        // by manually simulating what happens in load()
+        let mut config = BosonConfig::default();
+        let game_config_file = BosonConfig::load_config_file(&config_file_path).unwrap();
+
+        // Simulate the merging that happens in load()
+        if let Some(file_defaults) = game_config_file.defaults {
+            BosonConfig::merge_config_static(&mut config.default_compat_config, &file_defaults);
+        }
+
+        // Verify that defaults were merged into default_compat_config
+        assert_eq!(
+            config.default_compat_config.compat_type,
+            CompatType::Electron
+        );
+        assert_eq!(
+            config.default_compat_config.wrapper_command,
+            Some("/global/electron".to_string())
+        );
+        assert_eq!(
+            config.default_compat_config.env_vars.get("GLOBAL_VAR"),
+            Some(&"global_value".to_string())
+        );
+        assert_eq!(
+            config.default_compat_config.env_vars.get("SHARED_VAR"),
+            Some(&"from_defaults".to_string())
+        );
+        assert!(config
+            .default_compat_config
+            .wrapper_args
+            .contains(&"--global-arg".to_string()));
+        assert_eq!(config.default_compat_config.disable_steam_overlay, true);
+
+        // Test that get_game_config properly uses the merged defaults
+        let game_config = config.get_game_config(999999); // Non-existent game, should get defaults
+        assert_eq!(game_config.compat_type, CompatType::Electron);
+        assert_eq!(
+            game_config.wrapper_command,
+            Some("/global/electron".to_string())
+        );
+        assert_eq!(
+            game_config.env_vars.get("GLOBAL_VAR"),
+            Some(&"global_value".to_string())
+        );
+
+        // Add the override and test that it properly overrides the merged defaults
+        config
+            .game_overrides
+            .push((123456, game_config_file.overrides[&123456].clone()));
+        let overridden_config = config.get_game_config(123456);
+        assert_eq!(overridden_config.compat_type, CompatType::Love); // Overridden
+        assert_eq!(
+            overridden_config.wrapper_command,
+            Some("/global/electron".to_string())
+        ); // From defaults
+        assert_eq!(
+            overridden_config.env_vars.get("GLOBAL_VAR"),
+            Some(&"global_value".to_string())
+        ); // From defaults
+        assert_eq!(
+            overridden_config.env_vars.get("SHARED_VAR"),
+            Some(&"from_override".to_string())
+        ); // Overridden
     }
 }

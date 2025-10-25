@@ -1,6 +1,14 @@
 # Boson Game Configuration Example
-# Place this file in ~/.config/boson.d/ or in your Steam compatibility tool data directory
+# Place this file in ~/.config/boson.d/, ~/.config/boson.toml or in your Steam compatibility tool data directory
 # Filename can be anything ending in .toml (e.g., my_games.toml, electron_games.toml, etc.)
+
+# Global defaults that apply to all games unless overridden
+# These settings are merged with the built-in defaults
+[defaults]
+compat_type = "DeferProton"
+env_vars = { GLOBAL_VAR = "enabled", COMMON_SETTING = "default_value" }
+wrapper_args = ["--common-arg"]
+disable_steam_overlay = false
 
 # Balatro - Force LOVE2D runtime with custom settings, load Lovely Injector
 [override.2379780]
