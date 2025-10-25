@@ -130,15 +130,22 @@ impl Runtime {
 
     pub fn launch_game(&self, additional_args: Vec<String>) -> Result<()> {
         tracing::trace!(?self, ?additional_args, "Launching game");
-        let executable_path = match &self.game_config.compat_type {
-            &crate::config::CompatType::Electron => {
-                // find the ASAR path
-                get_asar_path(&self.exec_path).ok_or_else(|| {
-                    stable_eyre::eyre::eyre!("Could not find ASAR path for Electron game")
-                })?
-            }
-            _ => self.exec_path.clone(),
-        };
+
+        let executable_path: std::path::PathBuf =
+            if let Some(cmd) = &self.game_config.command_override {
+                PathBuf::from(shellexpand_full_no_errors(cmd).to_string())
+            } else {
+                match &self.game_config.compat_type {
+                    &crate::config::CompatType::Electron => {
+                        // find the ASAR path
+                        get_asar_path(&self.exec_path).ok_or_else(|| {
+                            stable_eyre::eyre::eyre!("Could not find ASAR path for Electron game")
+                        })?
+                    }
+                    _ => self.exec_path.clone(),
+                }
+            };
+
         let boson_lib_dir = self.compat_tool_path.join("lib");
 
         // Handle DeferProton case - dynamically get wrapper from compat tool
@@ -294,14 +301,8 @@ impl Runtime {
             // LUA_CPATH="/home/cappy/Projects/boson/build/lib/?.so;;"
             // Append LuaJIT paths
             let libdir_str = boson_lib_dir.display();
-            cmd.env(
-                "LUA_CPATH",
-                format!("{libdir_str}/love/?.so;;"),
-            );
-            cmd.env(
-                "LUA_PATH",
-                format!("{libdir_str}/love/?.lua;;"),
-            );
+            cmd.env("LUA_CPATH", format!("{libdir_str}/love/?.so;;"));
+            cmd.env("LUA_PATH", format!("{libdir_str}/love/?.lua;;"));
         }
 
         // Add extra envars

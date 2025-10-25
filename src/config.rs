@@ -389,6 +389,10 @@ impl BosonConfig {
         if overlay.wrapper_command.is_some() {
             base.wrapper_command = overlay.wrapper_command.clone();
         }
+        
+        if overlay.command_override.is_some() {
+            base.command_override = overlay.command_override.clone();
+        }
 
         // Always extend wrapper_args additively - don't replace if base has args
         base.wrapper_args.extend(overlay.wrapper_args.clone());
@@ -565,8 +569,7 @@ mod tests {
                 append_args: vec![],
                 extra_preloads: vec![],
                 disable_steam_overlay: false,
-                // Don't specify compat_tool_dir - should get runtime default
-                compat_tool_dir: None,
+                ..Default::default()
             },
         ));
 
@@ -653,6 +656,9 @@ pub struct GameConfig {
     /// or the Steam library paths
     #[serde(default = "default_compat_tool_dir")]
     pub compat_tool_dir: Option<String>,
+
+    /// Override the executable command used to launch the game
+    pub command_override: Option<String>,
 }
 
 fn default_compat_tool_dir() -> Option<String> {
@@ -672,6 +678,7 @@ pub struct GameConfigFile {
     #[serde(default)]
     pub defaults: Option<GameConfig>,
     #[serde(rename = "override")]
+    #[serde(default)]
     pub overrides: BTreeMap<u32, GameConfig>,
 }
 
