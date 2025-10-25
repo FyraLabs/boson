@@ -9,3 +9,4 @@ wrapper_args = ["--fused"]
 
 [override.2379780.env_vars]
 LOVE_WINDOW_VSYNC = "0"
+SDL_VIDEODRIVER = "x11"
